@@ -82,16 +82,10 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 		ctlConn.Close()
 	}
 
-	fmt.Println("客户端数据:Arch",authMsg.Arch)
-	fmt.Println("客户端数据:ClientId",authMsg.ClientId)
-	fmt.Println("客户端数据:MmVersion",authMsg.MmVersion)
-	fmt.Println("客户端数据:OS",authMsg.OS)
-	fmt.Println("客户端数据:Token",authMsg.Token)
-	fmt.Println("客户端数据:Version",authMsg.Version)
-
 	// login
 	if err := TokenVerification(authMsg.Token); err != nil {
 		failAuth(fmt.Errorf(err.Error() ))
+		return
 	}
 
 	if authMsg.Version != version.Proto {
@@ -100,14 +94,12 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 	}
 
 	// register the clientid
-	c.id = authMsg.ClientId
-	if c.id == "" {
-		// it's a new session, assign an ID
-		if c.id, err = util.SecureRandId(32); err != nil {
-			failAuth(err)
-			return
-		}
+	// it's a new session, assign an ID
+	if c.id, err = GetClientId(authMsg.Token); err != nil {
+		failAuth(err)
+		return
 	}
+
 
 	// set logging prefix
 	ctlConn.SetType("ctl")
@@ -142,6 +134,17 @@ func (c *Control) registerTunnel(rawTunnelReq *msg.ReqTunnel) {
 	for _, proto := range strings.Split(rawTunnelReq.Protocol, "+") {
 		tunnelReq := *rawTunnelReq
 		tunnelReq.Protocol = proto
+
+		failAuth := func(e error) {
+			_ = msg.WriteMsg(c.conn, &msg.AuthResp{Error: e.Error()})
+			c.conn.Close()
+		}
+		//验证隧道权限
+		err := TunnelVerification(c.id, &tunnelReq)
+		if err != nil {
+			failAuth(fmt.Errorf(err.Error()))
+			return
+		}
 
 		c.conn.Debug("Registering new tunnel")
 		t, err := NewTunnel(&tunnelReq, c)
@@ -216,7 +219,9 @@ func (c *Control) manager() {
 func (c *Control) writer() {
 	defer func() {
 		if err := recover(); err != nil {
-			c.conn.Info("Control::writer failed with error %v: %s", err, debug.Stack())
+			// kill everything if the reader stops
+			c.shutdown.Begin()
+			//c.conn.Info("Control::writer failed with error %v: %s", err, debug.Stack())
 		}
 	}()
 
@@ -238,7 +243,9 @@ func (c *Control) writer() {
 func (c *Control) reader() {
 	defer func() {
 		if err := recover(); err != nil {
-			c.conn.Warn("Control::reader failed with error %v: %s", err, debug.Stack())
+			// kill everything if the reader stops
+			c.shutdown.Begin()
+			//c.conn.Warn("Control::reader failed with error %v: %s", err, debug.Stack())
 		}
 	}()
 
