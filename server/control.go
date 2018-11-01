@@ -82,24 +82,28 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 		ctlConn.Close()
 	}
 
-	// login
-	if err := TokenVerification(authMsg.Token); err != nil {
+	// token the verify
+	if permission, err := TokenVerification(authMsg.Token); err != nil {
 		failAuth(fmt.Errorf(err.Error() ))
-		return
-	}
-
-	if authMsg.Version != version.Proto {
-		failAuth(fmt.Errorf("Incompatible versions. Server %s, client %s. Download a new version at http://ngrok-thur.com", version.MajorMinor(), authMsg.Version))
 		return
 	}
 
 	// register the clientid
 	// it's a new session, assign an ID
-	if c.id, err = GetClientId(authMsg.Token); err != nil {
+	if c.id, err = GetClientId(); err != nil {
 		failAuth(err)
 		return
 	}
 
+	//cache the permission
+	
+
+
+	//version the verify
+	if authMsg.Version != version.Proto {
+		failAuth(fmt.Errorf("Incompatible versions. Server %s, client %s. Download a new version at http://ngrok-thur.com", version.MajorMinor(), authMsg.Version))
+		return
+	}
 
 	// set logging prefix
 	ctlConn.SetType("ctl")

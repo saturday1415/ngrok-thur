@@ -7,8 +7,11 @@ import (
 
 type Member struct {
 	gorm.Model
-	Member_id   	int64  `gorm:"type:int(10);unique_index;PRIMARY_KEY;AUTO_INCREMENT"`
-	MemberNumber 	*string `gorm:"unique;not null"` // 设置会员号（member number）唯一并且不为空
-	Password		string	`gorm:"type:varchar(255);"`
-	Email       	string  `gorm:"type:varchar(100);unique_index"`
+	Member_id   		int64  	`gorm:"type:int(10);unique_index;PRIMARY_KEY;AUTO_INCREMENT"`
+	MemberNumber 		*string `gorm:"type:varchar(50)"` 
+	MemberPassword		string	`gorm:"type:varchar(255)"`
+	MemberPhone			string	`gorm:"type:varchar(11);unique;not null"`	// 设置手机号唯一并且不为空
+	Created_at			int		`gorm:"type:int(10)"`
+	Updated_at			int		`gorm:"type:int(10)"`
 }
+

@@ -6,15 +6,20 @@ import (
 )
 
 //token验证
-func TokenVerification(token string) (err error) {
+func TokenVerification(token string) (permission string,err error) {
 	if token != "fff33d74a0e53e98cc9051d99c326cd1" && token != "fff33d74a0e53e98cc9051d99c326cd11" {
-		return errors.New("Token is incorrect")
+		return permission, errors.New("Token is incorrect")
 	}
-	return
+	return permission,err
 }
 
 //register the clientid
-func GetClientId(token string) (clientid string, err error) {
+func GetClientId() (clientid string, err error) {
+	// it's a new session, assign an ID
+	clientid, err = util.SecureRandId(32);
+	return clientid, err
+	
+
 	if token == "fff33d74a0e53e98cc9051d99c326cd1" {
 		return "123123123", err
 	}
